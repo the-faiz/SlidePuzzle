@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slide Puzzle</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <h1>Slide Puzzle</h1>
+    <div class="rules">
+        <button class="btn"><a href="https://en.wikipedia.org/wiki/15_puzzle" target="_blank">About the
+                Game</a></button>
+        <button class="btn" onclick="toggle()">Rules of the Game</button>
+        <p id="rule">
+            Here are the rules for the 15 puzzle game:
+            <br>
+            1.Start with a 4x4 grid containing numbered tiles from 1 to 15, randomly arranged, with one empty space.<br>
+            2.The empty space allows adjacent tiles to be moved into it.<br>
+            3.Tiles can only be moved horizontally or vertically, never diagonally.<br>
+            4.To move a tile, click or tap on the tile adjacent to the empty space. The tile will slide into the empty
+            space.<br>
+            5.The goal is to arrange the tiles in numerical order, with tile 1 in the top-left corner and the empty space
+            in the bottom-right corner.<br>
+            6.The game is considered solved when all tiles are arranged in order.<br>
+            7.Some puzzle configurations may be unsolvable. Ensure that the initial arrangement of tiles allows for a
+            solvable puzzle.
+        </p>
+    </div>
+
+
+    <div class="cont1">
+        <div class="size">
+            <label for="size">Select Size</label>
+            <select id="size" onchange="change()">
+                <option value="1">3X3</option>
+                <option value="2">4X4</option>
+                <option value="3">5X5</option>
+                <option value="4">Write Manually</option>
+            </select>
+        </div>
+        <div class="challenge">
+            <label for="challengeMode">Accept a Challenge</label>
+            <select id="challengeMode" onchange="challenge()">
+                <option value="0">NONE</option>
+                <option value="1">Freezing Challenge</option>
+                <option value="2">Time Limit Challenge</option>
+                <option value="3">Move Limit Challenge</option>
+            </select>
+        </div>
+        <div id="first">
+            <button class="btn" onclick="shuffle()">NEW GAME</button>
+            <div id="moves">Moves:0</div>
+            <div id="time">Time:0s</div>
+        </div>
+    </div>
+
+
+    <div class="cont2">
+        <div id="table">
+
+        </div>
+    </div>
+
+    <div class="cont3" id="msg"></div>
+
+    <div class="cont4">
+        <h2>LeaderBoard</h2>
+        <h3 id="leaderboard"></h3>
+    </div>
+
+
+    <script>
+        var rows = 3;
+        var cols = 3;
+        var moveCount = 0;
+        var timeCount = 0;
+        var random;
+        var ele;
+        var timerElement = document.getElementById("time");
+        var timerId;
+        var randBlock = -1;
+        localStorage.setItem("bestScore",1000);
+        function change() {
+            const container = document.getElementById("table");
+            const choice = document.getElementById('size');
+            container.innerHTML = '';
+            if (choice.value == 1) { cols = 3; rows = 3; }
+            else if (choice.value == 2) { cols = 4; rows = 4; }
+            else if (choice.value == 3) { cols = 5; rows = 5; }
+            else if (choice.value == 4) { cols = 4; rows = 4; }
+            generateBoard();
+        }
+
+
+        function generateBoard() {
+            const container = document.getElementById("table");
+            container.style = 'grid-template-columns: repeat(' + cols + ',auto)';
+            var htmlLine;
+            for (var i = 0; i < cols * rows; i++) {
+                htmlLine = '<div id="' + (i + 1) + '" onclick="move(' + (i + 1) + ')">' + (i + 1) + '</div>';
+                container.innerHTML += htmlLine;
+            }
+            random = rows * cols;
+            ele = document.getElementById(random);
+            ele.style = "background-color:white;color:white;"
+        }
+
+        function shuffle() {
+            var rand;
+            for (var i = 0; i < rows * cols; i++) {
+                rand = Math.ceil(Math.random() * (rows * cols - 1) + 1);
+                // if (rand==random) continue;
+                swap(i + 1, rand);
+            }
+            moveCount = 0;
+            var moves = document.getElementById('moves');
+            moves.innerHTML = 'Moves:' + moveCount;
+            clearInterval(timerId);
+            randBlock = -1;
+        }
+
+        function swap(box1, box2) {
+            var ele1 = document.getElementById(box1);
+            var ele2 = document.getElementById(box2);
+            var temp = ele1.innerHTML;
+            ele1.innerHTML = ele2.innerHTML;
+            ele2.innerHTML = temp;
+            if (box1 == random) {
+                ele1.style = ''
+                ele2.style = "background-color:white;color:white;";
+                random = box2;
+            }
+            else if (box2 == random) {
+                ele2.style = ''
+                ele1.style = "background-color:white;color:white;";
+                random = box1;
+            }
+        }
+
+        function move(id) {
+            console.log(id);
+            if (id == randBlock) return;
+            if (id == random) return;
+            var r = Math.ceil(id / cols);
+            var c = id % rows;
+            if (c == 0) c = 3;
+
+            if (c == cols) {
+                if (id - 1 == random) { swap2(id, id - 1); random = id; }
+
+            }
+            else if (c == 1) {
+                if (id + 1 == random) { swap2(id, id + 1); random = id; }
+            }
+            else {
+                if (id + 1 == random) { swap2(id, id + 1); random = id; }
+                if (id - 1 == random) { swap2(id, id - 1); random = id; }
+
+            }
+
+            if (r == 1) {
+                if (id + cols == random) { swap2(id, id + cols); random = id; }
+            }
+
+            else if (r == rows) {
+                if (id - cols == random) { swap2(id, id - cols); random = id; }
+            }
+            else {
+                if (id + cols == random) { swap2(id, id + cols); random = id; }
+                else if (id - cols == random) { swap2(id, id - cols); random = id; }
+
+            }
+            if (win()) {
+                var msg = document.getElementById('msg');
+                msg.innerHTML = "Congratulations! You Won";
+                msg.style = "font-size:3rem;"
+                updateScore(moveCount);
+                clearInterval(timerId);
+
+            }
+        }
+
+        function swap2(box1, box2) {
+            var ele1 = document.getElementById(box1);
+            var ele2 = document.getElementById(box2);
+            console.log("inside");
+            var temp = ele1.innerHTML;
+            ele1.innerHTML = ele2.innerHTML;
+            ele2.innerHTML = temp;
+            ele2.style = ''
+            ele1.style = "background-color:white;color:white;";
+            moveCount++;
+            var moves = document.getElementById('moves');
+            moves.innerHTML = 'Moves:' + moveCount;
+            if (moveCount == 1) {
+                startTimer();
+            }
+        }
+
+
+        function win() {
+            var ele1;
+            for (var i = 1; i < rows * cols; i++) {
+                if (i == random) return 0;
+                ele1 = document.getElementById(i);
+                if (i != ele1.innerHTML) {
+                    return 0;
+                }
+            }
+            return 1;
+        }
+
+
+
+
+
+        function startTimer() {
+            console.log("yo");
+            var seconds = 0;
+            var minutes = 0;
+            var hours = 0;
+
+            timerId = setInterval(function () {
+                seconds++;
+                if (seconds === 60) {
+                    seconds = 0;
+                    minutes++;
+                }
+                if (minutes === 60) {
+                    minutes = 0;
+                    hours++;
+                }
+                timerElement.textContent = "Time:" + formatTime(hours) + ":" + formatTime(minutes) + ":" + formatTime(seconds);
+            }, 1000);
+        }
+        function formatTime(time) {
+            return time < 10 ? "0" + time : time;
+        }
+
+        function challenge() {
+            console.log("Y!");
+            var element = document.getElementById('challengeMode');
+            var choice = element.value;
+            var block;
+
+            if (choice == 0) {
+                var block;
+                for (var i = 1; i <= rows * cols; i++) {
+                    if (i == random) continue;
+                    block = document.getElementById(i);
+                    block.style = '';
+                }
+                clearInterval(challenge1)
+            }
+
+            if (choice == 1) {
+                for (var i = 0; i < 1; i++) {
+                    randBlock = Math.ceil(Math.random() * (rows * cols - 1) + 1);
+                    block = document.getElementById(randBlock);
+                    if (randBlock == random) { i--; continue; }
+                    else {
+                        block.style = 'background-color:red;'
+                    }
+                }
+                challenge1 = setInterval(function () {
+                    var block;
+                    for (var i = 1; i <= rows * cols; i++) {
+                        if (i == random) continue;
+                        block = document.getElementById(i);
+                        block.style = '';
+                    }
+                    for (var i = 0; i < 1; i++) {
+                        randBlock = Math.ceil(Math.random() * (rows * cols - 1) + 1);
+                        block = document.getElementById(randBlock);
+                        if (randBlock == random) { i--; continue; }
+                        else {
+                            block.style = 'background-color:red;'
+                        }
+                    }
+                }, 10000)
+
+
+            }
+
+            if (choice == 2) {
+
+            }
+
+            if (choice == 3) {
+
+            }
+        }
+
+        function toggle()
+        {
+            var rule = document.getElementById('rule');
+            if (rule.style.display==="none")
+            {
+                rule.style.display="block";
+            }
+            else
+            {
+                rule.style.display="none";
+            }
+        }
+
+        generateBoard(3, 3);
+
+        function updateScore(currentScore){
+            console.log("Check1")
+            var bestScore = localStorage.getItem("bestScore");
+            console.log(bestScore);
+            if (currentScore<bestScore){
+                console.log("Check2");
+                localStorage.setItem("bestSecore",currentScore);
+                bestScore = currentScore;
+            }
+            console.log("Chcek3");
+            var leaderboardElement = document.getElementById("leaderboard");
+            leaderboardElement.textContent = "Best Score: "+ bestScore+" Moves";
+        }
+
+        window.addEventListener("DOMContentLoaded", function(){
+            console.log("Check4");
+            var bestScore = localStorage.getItem("bestScore");
+            var leaderboardElement = document.getElementById("leaderboard");
+
+            if (bestScore){
+                console.log("Check5");
+                leaderboardElement.textContent = "Best Score : " +bestScore+" Moves";
+            }
+        })
+
+
+    </script>
+
+</body>
+
+</html>
